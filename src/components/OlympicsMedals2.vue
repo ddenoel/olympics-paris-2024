@@ -4,7 +4,7 @@ import type { Ref } from 'vue';
 import countries from '../assets/countries.json';
 
 const API_MAIN = '/blot';
-const ENDPOINT = `${API_MAIN}/fr/paris-2024/medailles`;
+const ENDPOINT = `${API_MAIN}/en/paris-2024/medals`;
 
 type Medals = {
   bronze: number;
