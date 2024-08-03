@@ -10,6 +10,11 @@ export default defineConfig({
         target: 'https://api.olympics.kevle.xyz',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/blot': {
+        target: 'https://olympics.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/blot/, '')
       }
     }
   }

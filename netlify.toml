@@ -2,3 +2,8 @@
 from = "/api/*"
 to = "https://api.olympics.kevle.xyz/:splat"
 status = 200
+
+[[redirects]]
+from = "/blot/*"
+to = "https://olympics.com/:splat"
+status = 200

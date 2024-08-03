@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import OlympicsMedals from './components/OlympicsMedals.vue';
+import OlympicsMedals2 from './components/OlympicsMedals2.vue';
 </script>
 
 <template>
   <img alt="Paris 2024 logo" src="./assets/paris-2024.png" class="logo">
-  <OlympicsMedals />
+  <OlympicsMedals2 />
 </template>
 
 <style scoped>
