@@ -59,7 +59,7 @@ function parse(response: Response): Upgraded {
 
   return {
     lastUpdated: new Date(last_updated),
-    lastUpdatedFormatted: formatDate(new Date(last_updated), 'yyyy-MM-dd HH:mm'),
+    lastUpdatedFormatted: formatDate(new Date(last_updated), 'yyyy-MM-dd, HH:mm'),
     results: upgradedResults,
   };
 
@@ -82,7 +82,7 @@ watchEffect(async () => {
     <p>🥉 <span class="big-number">{{ medalsValue.bronze }}</span> points</p>
   </div>
   <div v-if="result !== null && result !== undefined">
-     <p>Last updated: {{ result.lastUpdatedFormatted }}</p>
+     <p class="text-grey">Last updated: {{ result.lastUpdatedFormatted }}</p>
      <br/>
      <table>
       <tr v-for="(countryResult, index) of result.results" class="country-line">
@@ -92,11 +92,11 @@ watchEffect(async () => {
             <div class="country-image" v-bind:style="{ backgroundImage: 'url(' + 'https://cdn.jsdelivr.net/npm/flag-icons@6.3.0/flags/4x3/'+countryResult.country.iso_alpha_2.toLowerCase()+'.svg' + ')' }"></div>
           </td>
           <td class="country-name">{{  countryResult.country.name }}</td>
-          <td class="medals" :class="{ 'text-grey': !countryResult.medals.gold }">🥇 {{  countryResult.medals.gold }}</td>
-          <td class="medals" :class="{ 'text-grey': !countryResult.medals.silver }">🥈 {{  countryResult.medals.silver }}</td>
-          <td class="medals" :class="{ 'text-grey': !countryResult.medals.bronze }">🥉 {{  countryResult.medals.bronze }}</td>
+          <td class="medals" :class="{ 'text-grey': !countryResult.medals.gold }">  <div><span>🥇</span> {{  countryResult.medals.gold }}  </div></td>
+          <td class="medals" :class="{ 'text-grey': !countryResult.medals.silver }"><div><span>🥈</span> {{  countryResult.medals.silver }}</div></td>
+          <td class="medals" :class="{ 'text-grey': !countryResult.medals.bronze }"><div><span>🥉</span> {{  countryResult.medals.bronze }}</div></td>
           <td class="medals-count">{{  countryResult.count }} medals</td>
-          <td><span class="big-number">{{  countryResult.score }}</span> points</td>
+          <td class="score"><div><span class="big-number">{{  countryResult.score }}</span> points</div></td>
       </tr>
     </table>
   </div>
@@ -117,6 +117,32 @@ watchEffect(async () => {
   margin-top: 0;
 }
 
+.big-number {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td {
+  padding: 0.5rem;
+}
+
+.country-image {
+  width: 20px;
+  aspect-ratio: 4/3;
+  background-size: cover;
+  background-position: center;
+  border-radius: 1px;
+}
+
+.country-name {
+  text-align: left;
+}
+
 @media (max-width: 768px) {
   .medals-scores {
     position: static;
@@ -131,27 +157,10 @@ watchEffect(async () => {
   .medals-count {
     display: none;
   }
-}
 
-.big-number {
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.country-image {
-  width: 20px;
-  aspect-ratio: 4/3;
-  background-size: cover;
-  background-position: center;
-  border-radius: 1px;
-}
-
-.country-name {
-  text-align: left;
+  .medals>div, .score>div {
+    display: flex;
+    flex-direction: column;
+  }
 }
 </style>
