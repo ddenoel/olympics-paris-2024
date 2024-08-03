@@ -3,6 +3,7 @@ import { ref, watchEffect } from 'vue';
 import type { Ref } from 'vue'
 import { formatDate } from 'date-fns';
 
+/** API : https://github.com/kevle1/paris-2024-olympic-api */
 const API_MAIN = '/api';
 const ENDPOINT = `${API_MAIN}/medals`;
 
@@ -73,13 +74,13 @@ watchEffect(async () => {
 </script>
 
 <template>
+  <h1>True Paris 2024 ranking</h1>
   <div class="medals-scores">
     <h3>Medals scores</h3>
     <p>🥇 <span class="big-number">{{ medalsValue.gold }}</span> points</p>
     <p>🥈 <span class="big-number">{{ medalsValue.silver }}</span> points</p>
     <p>🥉 <span class="big-number">{{ medalsValue.bronze }}</span> points</p>
   </div>
-  <h1>True Paris 2024 ranking</h1>
   <div v-if="result !== null && result !== undefined">
      <p>Last updated: {{ result.lastUpdatedFormatted }}</p>
      <br/>
@@ -91,9 +92,9 @@ watchEffect(async () => {
             <div class="country-image" v-bind:style="{ backgroundImage: 'url(' + 'https://cdn.jsdelivr.net/npm/flag-icons@6.3.0/flags/4x3/'+countryResult.country.iso_alpha_2.toLowerCase()+'.svg' + ')' }"></div>
           </td>
           <td class="country-name">{{  countryResult.country.name }}</td>
-          <td class="medals">🥇 {{  countryResult.medals.gold }}</td>
-          <td class="medals">🥈 {{  countryResult.medals.silver }}</td>
-          <td class="medals">🥉 {{  countryResult.medals.bronze }}</td>
+          <td class="medals" :class="{ 'text-grey': !countryResult.medals.gold }">🥇 {{  countryResult.medals.gold }}</td>
+          <td class="medals" :class="{ 'text-grey': !countryResult.medals.silver }">🥈 {{  countryResult.medals.silver }}</td>
+          <td class="medals" :class="{ 'text-grey': !countryResult.medals.bronze }">🥉 {{  countryResult.medals.bronze }}</td>
           <td class="medals-count">{{  countryResult.count }} medals</td>
           <td><span class="big-number">{{  countryResult.score }}</span> points</td>
       </tr>
