@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, watchEffect, watch } from 'vue';
 import type { Ref } from 'vue';
+import { format} from 'date-fns';
 import countries from '../assets/countries.json';
 
 const API_MAIN = '/blot';
 const ENDPOINT = `${API_MAIN}/en/paris-2024/medals`;
+
+const API_MAIN_2 = '/api';
+const ENDPOINT_2 = `${API_MAIN_2}/medals`;
 
 type Medals = {
   bronze: number;
@@ -12,6 +16,8 @@ type Medals = {
   gold: number;
 };
 type Upgraded = {
+  lastUpdated?: Date;
+  lastUpdatedFormatted?: string;
   results: {
     country: {
       code: string;
@@ -28,7 +34,7 @@ type Upgraded = {
   }[];
 };
 
-type Response = {
+type Response1 = {
   props: {
     pageProps: {
       initialMedals: {
@@ -45,6 +51,20 @@ type Response = {
       };
     };
   };
+};
+
+type Response2 = {
+  last_updated: string;
+  length: number;
+  results: {
+    country: {
+      code: string;
+      iso_alpha_2: string;
+      name: string;
+    };
+    medals: Medals;
+    rank: number;
+  }[];
 };
 
 const result: Ref<Upgraded | null> = ref(null);
@@ -65,10 +85,31 @@ countries.countries.forEach((country) => {
   countriesMap.set(country.id, country);
 });
 
-function parse(response: Response): Upgraded {
+function sortAndSetRank(result: Upgraded): Upgraded {
   let prevScore = 0;
   let prevTrueRank = 1;
 
+  result.results = result.results
+    .sort((a, b) => b.score - a.score)
+    .map((res) => {
+      let trueRank = prevTrueRank;
+      if (prevScore && prevScore > res.score) {
+        trueRank = prevTrueRank + 1;
+      }
+
+      res.rank.true = trueRank;
+
+      prevScore = res.score;
+      prevTrueRank = res.rank.true;
+
+      return res;
+    });
+
+    return result;
+}
+
+function parse(response: Response1): Upgraded {
+  const lastUpdated = new Date();
   const results =
     response.props.pageProps.initialMedals.medalStandings.medalsTable
       .map(({ organisation, description, medalsNumber, rank }) => {
@@ -95,39 +136,70 @@ function parse(response: Response): Upgraded {
             true: 0,
           },
         };
-      })
-      .sort((a, b) => b.score - a.score)
-      .map((res) => {
-        let trueRank = prevTrueRank;
-        if (prevScore && prevScore > res.score) {
-          trueRank = prevTrueRank + 1;
-        }
-
-        res.rank.true = trueRank;
-
-        prevScore = res.score;
-        prevTrueRank = res.rank.true;
-
-        return res;
       });
 
-  return {
+  return sortAndSetRank({
+    lastUpdated,
+    lastUpdatedFormatted: format(lastUpdated, 'yyyy-MM-dd, HH:mm'),
     results,
-  };
+  });
+}
+
+function parse2(response: Response2): Upgraded {
+  const lastUpdated = new Date(response.last_updated);
+  const lastUpdatedFormatted = format(lastUpdated, 'yyyy-MM-dd, HH:mm');
+  const results = response.results
+    .map(({ country, medals, rank }) => {
+      const score =
+        medals.gold * MEDALS_VALUE.gold +
+        medals.silver * MEDALS_VALUE.silver +
+        medals.bronze * MEDALS_VALUE.bronze;
+
+      return {
+        country: {
+          name: country.name,
+          code: country.code,
+          flagUrl: `https://cdn.jsdelivr.net/npm/flag-icons@6.3.0/flags/4x3/${country.iso_alpha_2.toLowerCase()}.svg`,
+        },
+        medals,
+        count: medals.gold + medals.silver + medals.bronze,
+        score,
+        rank: {
+          official: rank,
+          true: 0,
+        },
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return sortAndSetRank({
+    lastUpdated,
+    lastUpdatedFormatted,
+    results,
+  })
 }
 
 watchEffect(async () => {
-  const parser = new DOMParser();
-  const response = await (
-    await fetch(ENDPOINT, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
-    })
-  ).text();
-  const html = parser.parseFromString(response, 'text/html');
-  const jsonData = html.getElementById('__NEXT_DATA__') as HTMLScriptElement;
-  const json: Response = JSON.parse(jsonData.innerText);
-  const trueResultValue = parse(json);
+  let trueResultValue: Upgraded;
+  try {
+    const parser = new DOMParser();
+    const response = await (
+      await fetch(ENDPOINT, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      })
+    ).text();
+    const html = parser.parseFromString(response, 'text/html');
+    const jsonData = html.getElementById('__NEXT_DATA__') as HTMLScriptElement;
+    const json: Response1 = JSON.parse(jsonData.innerText);
+    trueResultValue = parse(json);
+  } catch (e) {
+    console.error('An error happened while fetching the data, switching to other endpoint', e)
+    const response: Response2 = await (await fetch(ENDPOINT_2)).json();
+    trueResultValue = parse2(response);
+  }
   const officialResultValue: Upgraded = {
+    lastUpdated: trueResultValue.lastUpdated,
+    lastUpdatedFormatted: trueResultValue.lastUpdatedFormatted,
     results: [...trueResultValue.results].sort(
       (a, b) => a.rank.official - b.rank.official
     ),
@@ -175,6 +247,7 @@ watch(showOfficial, (newVal) => {
   </div>
 
   <div v-if="result !== null && result !== undefined">
+    <p class="last-updated">Last updated at: {{ result.lastUpdatedFormatted }}</p>
     <table>
       <tr
         v-for="{ count, country, medals, rank, score } of result.results"
@@ -325,6 +398,11 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+.last-updated {
+  font-size: small;
+  color: grey;
 }
 
 @media (max-width: 768px) {
