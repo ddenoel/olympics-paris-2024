@@ -128,7 +128,9 @@ watchEffect(async () => {
   const json: Response = JSON.parse(jsonData.innerText);
   const trueResultValue = parse(json);
   const officialResultValue: Upgraded = {
-    results: [...trueResultValue.results].sort((a, b) => a.rank.official - b.rank.official),
+    results: [...trueResultValue.results].sort(
+      (a, b) => a.rank.official - b.rank.official
+    ),
   };
   trueResult.value = trueResultValue;
   result.value = trueResultValue;
@@ -160,7 +162,7 @@ watch(showOfficial, (newVal) => {
   </div>
   <div class="show-official-container">
     <span class="switch-label" :class="{ active: !showOfficial }"
-      >True ranking</span
+      >Points ranking</span
     >
     <label class="show-official-checkbox switch"
       ><input v-model="showOfficial" type="checkbox" /><span
@@ -174,7 +176,10 @@ watch(showOfficial, (newVal) => {
 
   <div v-if="result !== null && result !== undefined">
     <table>
-      <tr v-for="{count, country, medals, rank, score } of result.results" class="country-line">
+      <tr
+        v-for="{ count, country, medals, rank, score } of result.results"
+        class="country-line"
+      >
         <td v-if="!showOfficial">{{ rank.true }}</td>
         <td v-else>{{ rank.official }}</td>
         <td>
@@ -189,16 +194,10 @@ watch(showOfficial, (newVal) => {
         <td class="medals" :class="{ 'text-grey': !medals.gold }">
           <div><span>🥇</span> {{ medals.gold }}</div>
         </td>
-        <td
-          class="medals"
-          :class="{ 'text-grey': !medals.silver }"
-        >
+        <td class="medals" :class="{ 'text-grey': !medals.silver }">
           <div><span>🥈</span> {{ medals.silver }}</div>
         </td>
-        <td
-          class="medals"
-          :class="{ 'text-grey': !medals.bronze }"
-        >
+        <td class="medals" :class="{ 'text-grey': !medals.bronze }">
           <div><span>🥉</span> {{ medals.bronze }}</div>
         </td>
         <td class="medals-count">{{ count }} medals</td>
