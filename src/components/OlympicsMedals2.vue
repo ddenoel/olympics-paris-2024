@@ -19,7 +19,10 @@ type Upgraded = {
       flagUrl: string;
     };
     medals: Medals;
-    rank: number;
+    rank: {
+      official: number;
+      true: number;
+    };
     count: number;
     score: number;
   }[];
@@ -40,7 +43,7 @@ type Response = {
           }[];
         };
       };
-    }
+    };
   };
 };
 
@@ -63,29 +66,50 @@ countries.countries.forEach((country) => {
 });
 
 function parse(response: Response): Upgraded {
-  const results = response.props.pageProps.initialMedals.medalStandings.medalsTable
-    .map(({ organisation, description, medalsNumber, rank }) => {
-      const medals = medalsNumber.find(
-        ({ type }) => type === 'Total'
-      ) as Medals;
-      const country = countriesMap.get(organisation);
+  let prevScore = 0;
+  let prevTrueRank = 1;
 
-      return {
-        country: {
-          name: description,
-          code: organisation,
-          flagUrl: `https://cdn.jsdelivr.net/npm/flag-icons@6.3.0/flags/4x3/${country.alpha2}.svg`
-        },
-        medals,
-        count: medals.gold + medals.silver + medals.bronze,
-        score:
+  const results =
+    response.props.pageProps.initialMedals.medalStandings.medalsTable
+      .map(({ organisation, description, medalsNumber, rank }) => {
+        const medals = medalsNumber.find(
+          ({ type }) => type === 'Total'
+        ) as Medals;
+        const country = countriesMap.get(organisation);
+        const score =
           medals.gold * MEDALS_VALUE.gold +
           medals.silver * MEDALS_VALUE.silver +
-          medals.bronze * MEDALS_VALUE.bronze,
-        rank,
-      };
-    })
-    .sort((a, b) => b.score - a.score);
+          medals.bronze * MEDALS_VALUE.bronze;
+
+        return {
+          country: {
+            name: description,
+            code: organisation,
+            flagUrl: `https://cdn.jsdelivr.net/npm/flag-icons@6.3.0/flags/4x3/${country.alpha2}.svg`,
+          },
+          medals,
+          count: medals.gold + medals.silver + medals.bronze,
+          score,
+          rank: {
+            official: rank,
+            true: 0,
+          },
+        };
+      })
+      .sort((a, b) => b.score - a.score)
+      .map((res) => {
+        let trueRank = prevTrueRank;
+        if (prevScore && prevScore > res.score) {
+          trueRank = prevTrueRank + 1;
+        }
+
+        res.rank.true = trueRank;
+
+        prevScore = res.score;
+        prevTrueRank = res.rank.true;
+
+        return res;
+      });
 
   return {
     results,
@@ -103,7 +127,9 @@ watchEffect(async () => {
   const jsonData = html.getElementById('__NEXT_DATA__') as HTMLScriptElement;
   const json: Response = JSON.parse(jsonData.innerText);
   const trueResultValue = parse(json);
-  const officialResultValue: Upgraded = {results: [...trueResultValue.results].sort((a, b) => a.rank - b.rank)};
+  const officialResultValue: Upgraded = {
+    results: [...trueResultValue.results].sort((a, b) => a.rank.official - b.rank.official),
+  };
   trueResult.value = trueResultValue;
   result.value = trueResultValue;
   officialResult.value = officialResultValue;
@@ -133,26 +159,54 @@ watch(showOfficial, (newVal) => {
     </p>
   </div>
   <div class="show-official-container">
-    <span class="switch-label" :class="{ 'active': !showOfficial }">True ranking</span>
-    <label class="show-official-checkbox switch"><input v-model="showOfficial" type="checkbox" /><span class="slider round"></span></label>
-    <span class="switch-label" :class="{ 'active': showOfficial }">Official ranking</span>
+    <span class="switch-label" :class="{ active: !showOfficial }"
+      >True ranking</span
+    >
+    <label class="show-official-checkbox switch"
+      ><input v-model="showOfficial" type="checkbox" /><span
+        class="slider round"
+      ></span
+    ></label>
+    <span class="switch-label" :class="{ active: showOfficial }"
+      >Official ranking</span
+    >
   </div>
-  
+
   <div v-if="result !== null && result !== undefined">
-     <table>
-      <tr v-for="(countryResult, index) of result.results" class="country-line">
-          <td v-if="!showOfficial">{{ index + 1 }}</td>
-          <td v-else>{{ countryResult.rank }}</td>
-          <td>
-            
-          <div class="country-image" v-bind:style="{ backgroundImage: 'url(' + countryResult.country.flagUrl + ')' }"></div>
-          </td>
-          <td class="country-name">{{  countryResult.country.name }}</td>
-          <td class="medals" :class="{ 'text-grey': !countryResult.medals.gold }">  <div><span>🥇</span> {{  countryResult.medals.gold }}  </div></td>
-          <td class="medals" :class="{ 'text-grey': !countryResult.medals.silver }"><div><span>🥈</span> {{  countryResult.medals.silver }}</div></td>
-          <td class="medals" :class="{ 'text-grey': !countryResult.medals.bronze }"><div><span>🥉</span> {{  countryResult.medals.bronze }}</div></td>
-          <td class="medals-count">{{  countryResult.count }} medals</td>
-          <td class="score"><div><span class="big-number">{{  countryResult.score }}</span> points</div></td>
+    <table>
+      <tr v-for="{count, country, medals, rank, score } of result.results" class="country-line">
+        <td v-if="!showOfficial">{{ rank.true }}</td>
+        <td v-else>{{ rank.official }}</td>
+        <td>
+          <div
+            class="country-image"
+            v-bind:style="{
+              backgroundImage: 'url(' + country.flagUrl + ')',
+            }"
+          ></div>
+        </td>
+        <td class="country-name">{{ country.name }}</td>
+        <td class="medals" :class="{ 'text-grey': !medals.gold }">
+          <div><span>🥇</span> {{ medals.gold }}</div>
+        </td>
+        <td
+          class="medals"
+          :class="{ 'text-grey': !medals.silver }"
+        >
+          <div><span>🥈</span> {{ medals.silver }}</div>
+        </td>
+        <td
+          class="medals"
+          :class="{ 'text-grey': !medals.bronze }"
+        >
+          <div><span>🥉</span> {{ medals.bronze }}</div>
+        </td>
+        <td class="medals-count">{{ count }} medals</td>
+        <td class="score">
+          <div>
+            <span class="big-number">{{ score }}</span> points
+          </div>
+        </td>
       </tr>
     </table>
   </div>
@@ -238,25 +292,25 @@ td {
   right: 0;
   bottom: 0;
   background-color: #ccc;
-  -webkit-transition: .4s;
-  transition: .4s;
-  background-color: #2196F3;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+  background-color: #2196f3;
 }
 
 .slider:before {
   position: absolute;
-  content: "";
+  content: '';
   height: 26px;
   width: 26px;
   left: 4px;
   bottom: 4px;
   background-color: white;
-  -webkit-transition: .4s;
-  transition: .4s;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
 }
 
 .switch-label.active {
-  color: #2196F3;
+  color: #2196f3;
 }
 
 input:checked + .slider:before {
