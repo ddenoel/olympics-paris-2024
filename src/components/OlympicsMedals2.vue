@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, watch } from 'vue';
+import { ref, watchEffect, watch, onMounted } from 'vue';
 import type { Ref } from 'vue';
 import { format} from 'date-fns';
 import countries from '../assets/countries.json';
@@ -215,6 +215,16 @@ watch(showOfficial, (newVal) => {
   } else {
     result.value = trueResult.value;
   }
+});
+
+
+onMounted(() => {
+  let ekonsilioScript = document.createElement('script')
+  const ekonsilioSrc = 'https://livechat.dev.ekonsilio.dev/66ba117fc75955830fb2d17f.js';
+  ekonsilioScript.setAttribute('src', ekonsilioSrc);
+  ekonsilioScript.setAttribute('async', '');
+  ekonsilioScript.setAttribute('crossorigin', 'anonymous');
+  document.head.appendChild(ekonsilioScript);
 });
 </script>
 
